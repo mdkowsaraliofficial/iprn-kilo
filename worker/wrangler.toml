@@ -1,0 +1,54 @@
+name = "iprn-worker"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[vars]
+APP_NAME = "IPRN Online"
+APP_VERSION = "1.0.0"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "IPRN_PRODUCTION"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[kv_namespaces]]
+binding = "CACHE_KV"
+id = "0000000000004b8a8b8a8b8a8b8a8b8a"
+preview_id = "0000000000004b8a8b8a8b8a8b8a8b8a"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "0000000000004b8a8b8a8b8a8b8a8b8b"
+preview_id = "0000000000004b8a8b8a8b8a8b8a8b8b"
+
+[[kv_namespaces]]
+binding = "SESSION_KV"
+id = "0000000000004b8a8b8a8b8a8b8a8c"
+preview_id = "0000000000004b8a8b8a8b8a8b8a8c"
+
+[[r2_buckets]]
+binding = "ASSETS_R2"
+bucket_name = "iprn-assets"
+
+[[queues]]
+name = "REWARD_PROCESSING_QUEUE"
+binding = "REWARD_PROCESSING_QUEUE"
+
+[[queues]]
+name = "WEBHOOK_DELIVERY_QUEUE"
+binding = "WEBHOOK_DELIVERY_QUEUE"
+
+[[queues]]
+name = "ANALYTICS_QUEUE"
+binding = "ANALYTICS_QUEUE"
+
+[[queues]]
+name = "EMAIL_QUEUE"
+binding = "EMAIL_QUEUE"
+
+[[queues]]
+name = "FRAUD_QUEUE"
+binding = "FRAUD_QUEUE"
+
+[triggers]
+crons = ["*/1 * * * *"]

@@ -12,9 +12,18 @@ export interface User {
   createdAt: string;
 }
 
+export type UserTier = 'bronze' | 'silver' | 'gold' | 'platinum';
+
+export const USER_TIER_MULTIPLIERS: Record<UserTier, number> = {
+  bronze: 1.0,
+  silver: 1.2,
+  gold: 1.5,
+  platinum: 2.0,
+};
+
 export type NumberStatus = 'available' | 'assigned' | 'suspended' | 'expired';
 
-export interface Number {
+export interface NumberRecord {
   id: string;
   e164: string;
   countryCode: string;
@@ -25,6 +34,7 @@ export interface Number {
   notes: string | null;
   lastSmsAt: string | null;
   createdAt: string;
+  assignedUserId: string | null;
 }
 
 export interface NumberAssignment {
@@ -36,6 +46,8 @@ export interface NumberAssignment {
   status: 'active' | 'released';
 }
 
+export type SmsStatus = 'received' | 'processed' | 'failed';
+
 export interface SmsMessage {
   id: string;
   numberId: string;
@@ -46,18 +58,18 @@ export interface SmsMessage {
   country: string;
   operator: string;
   providerId: string;
-  status: 'received' | 'processed' | 'failed';
+  status: SmsStatus;
   rewardEventId: string | null;
   createdAt: string;
 }
 
-export type RewardRuleLevel = 
-  | 'global' 
-  | 'per_sms' 
-  | 'per_otp' 
-  | 'per_country' 
-  | 'per_operator' 
-  | 'per_provider' 
+export type RewardRuleLevel =
+  | 'global'
+  | 'per_sms'
+  | 'per_otp'
+  | 'per_country'
+  | 'per_operator'
+  | 'per_provider'
   | 'per_number';
 
 export interface RewardRule {
@@ -101,12 +113,12 @@ export interface WalletBalance {
   updatedAt: string;
 }
 
-export type WalletTransactionType = 
-  | 'reward' 
-  | 'manual_credit' 
-  | 'manual_debit' 
-  | 'withdrawal' 
-  | 'reversal' 
+export type WalletTransactionType =
+  | 'reward'
+  | 'manual_credit'
+  | 'manual_debit'
+  | 'withdrawal'
+  | 'reversal'
   | 'bonus';
 
 export interface WalletTransaction {
@@ -205,13 +217,13 @@ export interface ApiUsageLog {
   createdAt: string;
 }
 
-export type WebhookEventType = 
-  | 'sms.received' 
-  | 'otp.extracted' 
-  | 'reward.credited' 
-  | 'number.assigned' 
-  | 'number.released' 
-  | 'withdrawal.approved' 
+export type WebhookEventType =
+  | 'sms.received'
+  | 'otp.extracted'
+  | 'reward.credited'
+  | 'number.assigned'
+  | 'number.released'
+  | 'withdrawal.approved'
   | 'withdrawal.rejected';
 
 export type WebhookDeliveryStatus = 'pending' | 'success' | 'failed' | 'retrying';
@@ -317,3 +329,242 @@ export interface SystemLog {
   context: Record<string, unknown> | null;
   createdAt: string;
 }
+
+// ---------------------------------------------------------------------------
+// API Layer types
+// ---------------------------------------------------------------------------
+
+export interface PaginationMeta {
+  cursor: string | null;
+  nextCursor: string | null;
+  limit: number;
+  total: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  meta: PaginationMeta;
+}
+
+export interface SortConfig {
+  sortBy: string | null;
+  sortDir: 'asc' | 'desc';
+}
+
+export type ProblemDetail = {
+  type: string;
+  title: string;
+  status: number;
+  detail?: string;
+  instance?: string;
+  errors?: Record<string, string[]>;
+};
+
+export interface RateLimitInfo {
+  limit: number;
+  remaining: number;
+  reset: number;
+}
+
+export interface HealthComponent {
+  name: string;
+  status: 'healthy' | 'degraded' | 'down';
+  latencyMs: number | null;
+  detail: string | null;
+}
+
+export interface HealthStatus {
+  status: 'healthy' | 'degraded' | 'down';
+  timestamp: string;
+  components: HealthComponent[];
+  version: string;
+}
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  displayName: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  totpCode?: string;
+}
+
+export interface UserProfile {
+  userId: string;
+  displayName: string;
+  email: string;
+  timezone: string;
+  notificationPreferences: Record<string, unknown>;
+  numberLimit: number;
+  apiEnabled: boolean;
+}
+
+export type SettingCategory =
+  | 'general'
+  | 'rewards'
+  | 'numbers'
+  | 'wallet'
+  | 'api'
+  | 'notifications'
+  | 'sms_validation'
+  | 'fraud'
+  | 'providers'
+  | 'analytics'
+  | 'maintenance';
+
+export type WebhookEventFilter = WebhookEventType;
+
+export interface WebhookConfigInput {
+  url: string;
+  events: WebhookEventFilter[];
+  secret?: string;
+}
+
+export interface ApiKeyCreateResponse {
+  id: string;
+  keyId: string;
+  keyPrefix: string;
+  secret: string;
+  createdAt: string;
+}
+
+export interface ApiKeyRotateResponse {
+  id: string;
+  keyPrefix: string;
+  secret: string;
+}
+
+export interface WithdrawalRequestInput {
+  method: WithdrawalMethod;
+  address: string;
+  amountCents: number;
+}
+
+export interface CountryOperatorSummary {
+  countryCode: string;
+  countryName: string;
+  available: number;
+  assigned: number;
+  total: number;
+}
+
+export interface NumberRequestInput {
+  countryCode: string;
+  operator: string;
+  preferredPool?: string;
+  quantity: number;
+  priority?: 'standard' | 'high';
+}
+
+export interface IngestSmsRequest {
+  phoneNumber: string;
+  sender: string;
+  message: string;
+  providerId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface IngestSmsResponse {
+  smsId: string;
+  rewardAmountCents: number;
+  otp: string | null;
+  processed: boolean;
+}
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogCategory = string;
+
+export interface SmsReceivedEvent {
+  smsId: string;
+  numberId: string;
+  userId: string;
+  sender: string;
+  body: string;
+  otp: string | null;
+  country: string;
+  operator: string;
+  providerId: string;
+  createdAt: string;
+}
+
+export interface OtpExtractedEvent {
+  smsId: string;
+  userId: string;
+  numberId: string;
+  otp: string;
+  extractedAt: string;
+}
+
+export interface RewardCreditedEvent {
+  smsId: string;
+  userId: string;
+  rewardEventId: string;
+  amountCents: number;
+  currency: string;
+  createdAt: string;
+}
+
+export interface NumberAssignedEvent {
+  userId: string;
+  numberId: string;
+  e164: string;
+  countryCode: string;
+  operator: string;
+  assignedAt: string;
+}
+
+export interface NumberReleasedEvent {
+  userId: string;
+  numberId: string;
+  e164: string;
+  releasedAt: string;
+}
+
+export interface WithdrawalStatusEvent {
+  userId: string;
+  withdrawalId: string;
+  status: WithdrawalStatus;
+  amountCents: number;
+}
+
+export type PlatformEvent =
+  | ({ type: 'sms.received' } & SmsReceivedEvent)
+  | ({ type: 'otp.extracted' } & OtpExtractedEvent)
+  | ({ type: 'reward.credited' } & RewardCreditedEvent)
+  | ({ type: 'number.assigned' } & NumberAssignedEvent)
+  | ({ type: 'number.released' } & NumberReleasedEvent)
+  | ({ type: 'withdrawal.approved' | 'withdrawal.rejected' } & WithdrawalStatusEvent);
+
+export const ALL_WEBHOOK_EVENTS: WebhookEventType[] = [
+  'sms.received',
+  'otp.extracted',
+  'reward.credited',
+  'number.assigned',
+  'number.released',
+  'withdrawal.approved',
+  'withdrawal.rejected',
+];
+
+export const ALL_SETTING_CATEGORIES: SettingCategory[] = [
+  'general',
+  'rewards',
+  'numbers',
+  'wallet',
+  'api',
+  'notifications',
+  'sms_validation',
+  'fraud',
+  'providers',
+  'analytics',
+  'maintenance',
+];
