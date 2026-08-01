@@ -1,16 +1,14 @@
-import type { D1Database, KVNamespace, Queue, R2Bucket, ExecutionContext, Request } from '@cloudflare/workers-types';
+import type { D1Database, KVNamespace, Queue, ExecutionContext, Request } from '@cloudflare/workers-types';
 
 export interface Env {
   DB: D1Database;
   CACHE_KV: KVNamespace;
   RATE_LIMIT_KV: KVNamespace;
   SESSION_KV: KVNamespace;
-  ASSETS_R2: R2Bucket;
   ASSETS: Fetcher;
   REWARD_PROCESSING_QUEUE: Queue<any>;
   WEBHOOK_DELIVERY_QUEUE: Queue<any>;
   ANALYTICS_QUEUE: Queue<any>;
-  EMAIL_QUEUE: Queue<any>;
   FRAUD_QUEUE: Queue<any>;
   APP_NAME: string;
   APP_VERSION: string;

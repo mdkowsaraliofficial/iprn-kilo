@@ -1,12 +1,13 @@
 name = "iprn-worker"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
+logpush = true
 
 [vars]
 APP_NAME = "IPRN Online"
 APP_VERSION = "1.0.0"
-ADMIN_TOKEN = "dev-admin-token-change-me"
-VITE_API_URL = "https://iprn-worker.example.dev"
+# Secrets (e.g. ADMIN_TOKEN) are configured via `wrangler secret put` for
+# production and via `worker/.dev.vars` for local dev. Never commit secrets.
 
 [[d1_databases]]
 binding = "DB"
@@ -28,48 +29,40 @@ binding = "SESSION_KV"
 id = "0000000000004b8a8b8a8b8a8b8a8c"
 preview_id = "0000000000004b8a8b8a8b8a8b8a8c"
 
-[[r2_buckets]]
-binding = "ASSETS_R2"
-bucket_name = "iprn-assets"
-
-[[queues]]
-name = "REWARD_PROCESSING_QUEUE"
+[[queues.producers]]
+queue = "REWARD_PROCESSING_QUEUE"
 binding = "REWARD_PROCESSING_QUEUE"
 
-[[queues]]
-name = "WEBHOOK_DELIVERY_QUEUE"
+[[queues.producers]]
+queue = "WEBHOOK_DELIVERY_QUEUE"
 binding = "WEBHOOK_DELIVERY_QUEUE"
 
-[[queues]]
-name = "ANALYTICS_QUEUE"
+[[queues.producers]]
+queue = "ANALYTICS_QUEUE"
 binding = "ANALYTICS_QUEUE"
 
-[[queues]]
-name = "EMAIL_QUEUE"
-binding = "EMAIL_QUEUE"
-
-[[queues]]
-name = "FRAUD_QUEUE"
+[[queues.producers]]
+queue = "FRAUD_QUEUE"
 binding = "FRAUD_QUEUE"
 
-# Queue consumers
+# Queue consumers (wrangler v4 schema: queues = { producers, consumers })
 [[queues.consumers]]
 queue = "WEBHOOK_DELIVERY_QUEUE"
 max_batch_size = 100
-max_batch_wait = 30
+max_batch_timeout = 30
 max_retries = 5
 dead_letter_queue = "FRAUD_QUEUE"
 
 [[queues.consumers]]
 queue = "REWARD_PROCESSING_QUEUE"
 max_batch_size = 50
-max_batch_wait = 15
+max_batch_timeout = 15
 max_retries = 3
 
 [[queues.consumers]]
 queue = "ANALYTICS_QUEUE"
 max_batch_size = 100
-max_batch_wait = 30
+max_batch_timeout = 30
 max_retries = 3
 
 [triggers]
@@ -80,9 +73,6 @@ directory = "./public"
 binding = "ASSETS"
 not_found_handling = "none"
 
-[env.local]
-vars = { VITE_API_URL = "http://localhost:8787" }
-
-[[routes]]
-pattern = "iprn.localhost/*"
-zone_name = "iprn.localhost"
+# Add a production custom-domain route per environment, e.g.:
+#   npx wrangler route add "api.example.com/*" iprn-worker
+# Do NOT commit a placeholder zone: it makes `wrangler deploy` fail to resolve it.

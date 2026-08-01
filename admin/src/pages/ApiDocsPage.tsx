@@ -151,7 +151,7 @@ export function ApiDocsPage() {
         <CardContent>
           <p className="text-sm text-muted-foreground">
             User requests are authenticated with <code className="rounded bg-white/10 px-1">Authorization: Bearer &lt;token&gt;</code>
-            , where <code className="rounded bg-white/10 px-1">&lt;token&gt;</code> is the JWT returned by <code className="rounded bg-white/10 px-1">POST /api/v1/login</code>.
+            ,             where <code className="rounded bg-white/10 px-1">&lt;token&gt;</code> is the opaque bearer token returned by <code className="rounded bg-white/10 px-1">POST /api/v1/login</code>.
             Refresh expired access tokens via <code className="rounded bg-white/10 px-1">POST /api/v1/refresh</code> with <code className="rounded bg-white/10 px-1">{"{ \"refreshToken\": \"<token>\" }"}</code>.
             Admin requests require an <code className="rounded bg-white/10 px-1">x-admin-token</code> header matching the worker <code className="rounded bg-white/10 px-1">ADMIN_TOKEN</code> secret; on mismatch the request is rejected as unauthorized (401). All error responses are RFC 7807 <code className="rounded bg-white/10 px-1">application/problem+json</code> documents.
           </p>

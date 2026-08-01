@@ -6,12 +6,13 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run deploy",
+    "build": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "db:migrate": "wrangler d1 execute IPRN_DB --file=worker/migrations/0001_initial_schema.sql",
-    "db:seed": "wrangler d1 execute IPRN_DB --file=worker/migrations/0030_seed.sql",
+    "db:migrate": "bash scripts/migrate.sh",
+    "db:seed": "wrangler d1 execute IPRN_PRODUCTION --file=migrations/0030_seed.sql",
+    "stage:assets": "bash scripts/stage-assets.sh",
     "test": "vitest run"
   },
   "dependencies": {
