@@ -1,50 +1,47 @@
-import { useEffect, useState, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { User, Hash, Mic, MessageSquare } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { useEffect, useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Home, BarChart3, Wallet, Hash, MessageSquare, Clock, Award } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useNavigate, useLocation } from "@/lib/router";
 
-type NavItem = {
-  id: string
-  label: string
-  icon: typeof User
-}
+type NavItem = { id: string; label: string; icon: React.ComponentType<React.SVGProps<SVGSVGElement>> };
 
 const navItems: NavItem[] = [
-  { id: "profile", label: "My Profile", icon: User },
-  { id: "numbers", label: "My Numbers", icon: Hash },
-  { id: "voice", label: "Get Voice", icon: Mic },
-  { id: "sms", label: "Get SMS", icon: MessageSquare },
-]
+  { id: "/", label: "Dashboard", icon: Home },
+  { id: "/stats", label: "Stats", icon: BarChart3 },
+  { id: "/wallet", label: "Wallet", icon: Wallet },
+  { id: "/numbers", label: "Numbers", icon: Hash },
+  { id: "/sms", label: "SMS", icon: MessageSquare },
+  { id: "/otp", label: "OTP", icon: Clock },
+  { id: "/rewards", label: "Rewards", icon: Award },
+];
 
-const INACTIVITY_DELAY = 5000
+const INACTIVITY_DELAY = 5000;
 
 export function FloatingNavBar() {
-  const [collapsed, setCollapsed] = useState(false)
-  const [active, setActive] = useState("profile")
+  const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
+  const path = useLocation();
 
   const resetTimer = useCallback(() => {
-    setCollapsed(false)
-  }, [])
+    setCollapsed(false);
+  }, []);
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-
+    let timer: ReturnType<typeof setTimeout>;
     const handleActivity = () => {
-      setCollapsed(false)
-      clearTimeout(timer)
-      timer = setTimeout(() => setCollapsed(true), INACTIVITY_DELAY)
-    }
-
-    const events: (keyof WindowEventMap)[] = ["mousemove", "keydown", "scroll", "touchstart"]
-
-    events.forEach((e) => window.addEventListener(e, handleActivity, { passive: true }))
-    timer = setTimeout(() => setCollapsed(true), INACTIVITY_DELAY)
-
+      setCollapsed(false);
+      clearTimeout(timer);
+      timer = setTimeout(() => setCollapsed(true), INACTIVITY_DELAY);
+    };
+    const events: (keyof WindowEventMap)[] = ["mousemove", "keydown", "scroll", "touchstart"];
+    events.forEach((e) => window.addEventListener(e, handleActivity, { passive: true }));
+    timer = setTimeout(() => setCollapsed(true), INACTIVITY_DELAY);
     return () => {
-      clearTimeout(timer)
-      events.forEach((e) => window.removeEventListener(e, handleActivity))
-    }
-  }, [])
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, handleActivity));
+    };
+  }, []);
 
   return (
     <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center px-4">
@@ -72,12 +69,12 @@ export function FloatingNavBar() {
             aria-label="Main navigation"
           >
             {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = active === item.id
+              const Icon = item.icon;
+              const isActive = path === item.id;
               return (
                 <motion.button
                   key={item.id}
-                  onClick={() => setActive(item.id)}
+                  onClick={() => navigate(item.id)}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className={cn(
@@ -98,11 +95,11 @@ export function FloatingNavBar() {
                     />
                   )}
                 </motion.button>
-              )
+              );
             })}
           </motion.nav>
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

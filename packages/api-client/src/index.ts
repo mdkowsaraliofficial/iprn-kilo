@@ -1,6 +1,5 @@
 import useSWR, { type SWRConfiguration } from 'swr';
 import type {
-  User,
   NumberRecord,
   CountryOperatorSummary,
   Country,
@@ -8,9 +7,9 @@ import type {
   SmsMessage,
   RewardEvent,
   RewardRule,
-  WalletBalance,
   WalletTransaction,
   WithdrawalRequest,
+  WithdrawalStatus,
   Provider,
   ApiKey,
   WebhookDelivery,
@@ -20,11 +19,20 @@ import type {
   AuditLog,
   HealthStatus,
   UserProfile,
-   AnalyticsByDay,
-   IngestSmsRequest,
+  AnalyticsByDay,
+  AnalyticsSummary,
+  RewardSummary,
+  RewardDetail,
+  WithdrawalSubmitResult,
+  AdminUser,
+  AdminUserDetail,
+  AdminStats,
+  AdminDelivery,
+  IngestSmsRequest,
   IngestSmsResponse,
   WebhookConfigInput,
   WithdrawalMethod,
+  WalletTransactionType,
   PaginationMeta,
   ProblemDetail,
 } from '@iprn/types';
@@ -113,20 +121,40 @@ export type AnySseEvent =
   | NotificationEvent
   | WithdrawalEvent;
 
+const SSE_EVENT_TYPES: AnySseEvent['type'][] = [
+  'sms.received',
+  'otp.extracted',
+  'reward.credited',
+  'wallet.updated',
+  'number.assigned',
+  'number.released',
+  'notification.new',
+  'withdrawal.status',
+];
+
 export function createSseStream(
   eventPath: string,
   onEvent: (event: AnySseEvent) => void,
   onError?: (err: Event) => void
 ): EventSource {
   const source = new EventSource(`${_config.baseUrl}${eventPath}`);
-  source.onmessage = (e) => {
+
+  // The worker broadcasts named SSE events (e.g. `event: sms.received`), so
+  // `onmessage` never fires. Listen on each event type and attach the
+  // discriminant `type` to the parsed payload.
+  const dispatch = (type: AnySseEvent['type']) => (e: MessageEvent) => {
     try {
-      const data = JSON.parse(e.data) as AnySseEvent;
-      onEvent(data);
+      const payload = JSON.parse(e.data) as Record<string, unknown>;
+      onEvent({ type, ...payload } as AnySseEvent);
     } catch {
       // non-json keepalive
     }
   };
+
+  for (const t of SSE_EVENT_TYPES) {
+    source.addEventListener(t, dispatch(t) as EventListener);
+  }
+
   if (onError) source.onerror = onError;
   return source;
 }
@@ -151,19 +179,20 @@ function buildQuery(q: Record<string, unknown>): string {
 
 export const apiClient = {
   // Auth
-  me: () => request<User>('/v1/auth/me'),
-  updateProfile: (data: { displayName?: string; email?: string }) =>
-    request<User>('/v1/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
+  me: () => request<UserProfile>('/v1/auth/me'),
+  updateProfile: (data: { displayName?: string; email?: string; timezone?: string; notificationPreferences?: Record<string, unknown> }) =>
+    request<{ success: boolean }>('/v1/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
   login: (data: { email: string; password: string }) =>
-    request<{ accessToken: string; refreshToken: string; user: User }>('/v1/auth/login', {
+    request<{ accessToken: string; refreshToken: string; user: UserProfile }>('/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   register: (data: { email: string; password: string; displayName: string }) =>
-    request<{ accessToken: string; refreshToken: string; user: User }>('/v1/auth/register', {
+    request<{ accessToken: string; refreshToken: string; user: UserProfile }>('/v1/auth/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  logout: () => request<{ success: boolean }>('/v1/auth/logout', { method: 'POST' }),
 
   // Numbers
   listNumbers: (q: Record<string, unknown> = {}) =>
@@ -207,6 +236,7 @@ export const apiClient = {
       frozenCents: number;
       lifetimeEarnedCents: number;
       lifetimeWithdrawnCents: number;
+      withdrawableCents: number;
       updatedAt: string;
     }>('/v1/wallet'),
   walletTransactions: (q: Record<string, unknown> = {}) =>
@@ -216,11 +246,9 @@ export const apiClient = {
   rewardEvents: (q: Record<string, unknown> = {}) =>
     request<{ data: RewardEvent[]; meta: PaginationMeta }>('/v1/rewards' + buildQuery(q)),
   rewardSummary: () =>
-    request<{ today: number; yesterday: number; last7Days: number; last30Days: number; lifetime: number }>(
-      '/v1/rewards/summary'
-    ),
+    request<RewardSummary>('/v1/rewards/summary'),
   rewardDetail: (id: string) =>
-    request<{ rule: RewardRule; event: RewardEvent }>(`/v1/rewards/${id}`),
+    request<RewardDetail>(`/v1/rewards/${id}`),
 
   // Transactions
   transactions: (q: Record<string, unknown> = {}) =>
@@ -228,7 +256,7 @@ export const apiClient = {
 
   // Withdrawals
   createWithdrawal: (data: { method: WithdrawalMethod; address: string; amountCents: number }) =>
-    request<WithdrawalRequest>('/v1/withdrawals', {
+    request<WithdrawalSubmitResult>('/v1/withdrawals', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
@@ -294,14 +322,7 @@ export const apiClient = {
 
   // Analytics
   analyticsSummary: () =>
-    request<{
-      smsCountToday: number;
-      otpCountToday: number;
-      earningsTodayCents: number;
-      earnings7dCents: number;
-      earnings30dCents: number;
-      lifetimeEarningCents: number;
-    }>('/v1/analytics/summary'),
+    request<AnalyticsSummary>('/v1/analytics/summary'),
   analyticsSmsByDay: (q: { from?: string; to?: string }) =>
     request<AnalyticsByDay[]>('/v1/analytics/sms-by-day' + buildQuery(q)),
   analyticsEarningsByDay: (q: { from?: string; to?: string }) =>
@@ -333,32 +354,32 @@ export const apiClient = {
   // Admin
   admin: {
     users: () =>
-      request<Array<User & { tier: string; numberLimit: number }>>('/v1/admin/users'),
+      request<AdminUser[]>('/v1/admin/users'),
     userDetail: (id: string) =>
-      request<User & { tier: string; numberLimit: number; wallet: WalletBalance }>(
+      request<AdminUserDetail>(
         `/v1/admin/users/${id}`
       ),
     updateUser: (id: string, data: Record<string, unknown>) =>
-      request<User>(`/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    adjustWallet: (userId: string, data: { type: string; amountCents: number; reason: string }) =>
-      request<{ success: boolean }>(`/v1/admin/wallet/${userId}/adjust`, {
+      request<{ success: boolean }>(`/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    adjustWallet: (userId: string, data: { type: WalletTransactionType; amountCents: number; reason: string }) =>
+      request<{ success: boolean; balanceAfterCents: number; approvedCents: number }>(`/v1/admin/wallet/${userId}/adjust`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
     rewardRules: (q: Record<string, unknown> = {}) =>
-      request<{ data: RewardRule[]; meta: PaginationMeta }>('/v1/admin/reward-rules' + buildQuery(q)),
+      request<RewardRule[]>('/v1/admin/reward-rules' + buildQuery(q)),
     createRewardRule: (data: Record<string, unknown>) =>
-      request<RewardRule>('/v1/admin/reward-rules', { method: 'POST', body: JSON.stringify(data) }),
+      request<{ id: string } & Record<string, unknown>>('/v1/admin/reward-rules', { method: 'POST', body: JSON.stringify(data) }),
     updateRewardRule: (id: string, data: Record<string, unknown>) =>
-      request<RewardRule>(`/v1/admin/reward-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      request<{ success: boolean }>(`/v1/admin/reward-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteRewardRule: (id: string) =>
       request<{ success: boolean }>(`/v1/admin/reward-rules/${id}`, { method: 'DELETE' }),
     providers: () => request<Provider[]>('/v1/admin/providers'),
     countries: () => request<Country[]>('/v1/admin/countries'),
     operators: (q: Record<string, unknown> = {}) =>
-      request<{ data: Operator[]; meta: PaginationMeta }>('/v1/admin/operators' + buildQuery(q)),
+      request<Operator[]>('/v1/admin/operators' + buildQuery(q)),
     numbers: (q: Record<string, unknown> = {}) =>
-      request<{ data: NumberRecord[]; meta: PaginationMeta }>('/v1/admin/numbers' + buildQuery(q)),
+      request<NumberRecord[]>('/v1/admin/numbers' + buildQuery(q)),
     uploadNumbers: (file: File) => {
       const form = new FormData();
       form.append('file', file);
@@ -368,14 +389,14 @@ export const apiClient = {
       });
     },
     systemStats: () =>
-      request<{ totalUsers: number; totalNumbers: number; totalSms: number; totalOtp: number; totalEarningsCents: number; totalRewardsCents: number }>('/v1/admin/stats'),
+      request<AdminStats>('/v1/admin/stats'),
     auditLogs: (q: Record<string, unknown> = {}) =>
-      request<{ data: AuditLog[]; meta: PaginationMeta }>('/v1/admin/audit-logs' + buildQuery(q)),
+      request<AuditLog[]>('/v1/admin/audit-logs' + buildQuery(q)),
     systemLogs: (q: Record<string, unknown> = {}) =>
-      request<{ data: SystemLog[]; meta: PaginationMeta }>('/v1/admin/system-logs' + buildQuery(q)),
+      request<SystemLog[]>('/v1/admin/system-logs' + buildQuery(q)),
     allWithdrawals: (q: Record<string, unknown> = {}) =>
-      request<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/v1/admin/withdrawals' + buildQuery(q)),
-    reviewWithdrawal: (id: string, data: { status: string; reason?: string }) =>
+      request<WithdrawalRequest[]>('/v1/admin/withdrawals' + buildQuery(q)),
+    reviewWithdrawal: (id: string, data: { status: WithdrawalStatus; reason?: string }) =>
       request<WithdrawalRequest>(`/v1/admin/withdrawals/${id}/review`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -383,10 +404,10 @@ export const apiClient = {
     allWebhooks: () =>
       request<Array<{ id: string; userId: string; url: string; events: string[] }>>('/v1/admin/webhooks'),
     allDeliveries: (q: Record<string, unknown> = {}) =>
-      request<{ data: WebhookDelivery[]; meta: PaginationMeta }>('/v1/admin/webhook-deliveries' + buildQuery(q)),
+      request<AdminDelivery[]>('/v1/admin/webhook-deliveries' + buildQuery(q)),
     systemSettings: () => request<SystemSetting[]>('/v1/admin/system-settings'),
     updateSetting: (key: string, data: { value: unknown; description?: string }) =>
-      request<SystemSetting>(`/v1/admin/system-settings/${key}`, { method: 'PUT', body: JSON.stringify(data) }),
+      request<{ success: boolean }>(`/v1/admin/system-settings/${key}`, { method: 'PUT', body: JSON.stringify(data) }),
     sendNotification: (data: { type: string; title: string; body: string; userIds?: string[]; data?: Record<string, unknown> }) =>
       request<{ sent: number }>(`/v1/admin/notifications/send`, { method: 'POST', body: JSON.stringify(data) }),
   },
@@ -399,19 +420,13 @@ export function useSWRApi<T>(key: string | null, opts?: SWRConfiguration) {
 }
 
 export function useAuth() {
-  return useSWRApi<User>('/v1/auth/me', { revalidateOnMount: true });
+  return useSWRApi<UserProfile>('/v1/auth/me', { revalidateOnMount: true });
 }
 export function useStats() {
-  return useSWRApi<{ totalNumbers: number; totalSms: number; totalVoice: number }>('/v1/analytics/summary');
+  return useSWRApi<AnalyticsSummary>('/v1/analytics/summary');
 }
 export function useEarnings() {
-  return useSWRApi<{
-    today: number;
-    yesterday: number;
-    last7Days: number;
-    last30Days: number;
-    lifetime: number;
-  }>('/v1/rewards/summary');
+  return useSWRApi<RewardSummary>('/v1/rewards/summary');
 }
 export function useNumbers(q: Record<string, unknown> = {}) {
   const qs = buildQuery(q);
@@ -436,6 +451,8 @@ export function useWalletBalance() {
     frozenCents: number;
     lifetimeEarnedCents: number;
     lifetimeWithdrawnCents: number;
+    withdrawableCents: number;
+    updatedAt: string;
   }>('/v1/wallet');
 }
 export function useCountries() {
@@ -450,7 +467,7 @@ export function useTransactions(q: Record<string, unknown> = {}) {
   return useSWRApi<{ data: WalletTransaction[]; meta: PaginationMeta }>('/v1/transactions' + qs);
 }
 export function useAlerts() {
-  return useSWRApi<{ status: string } | null>('/v1/admin/stats');
+  return useSWRApi<AdminStats>('/v1/admin/stats');
 }
 
 export { fetcher };

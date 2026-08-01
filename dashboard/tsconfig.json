@@ -7,7 +7,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@iprn/api-client": ["../packages/api-client/src"],
+      "@iprn/types": ["../packages/types/src"]
     }
   }
 }

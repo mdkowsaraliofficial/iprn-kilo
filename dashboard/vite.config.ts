@@ -13,4 +13,13 @@ export default defineConfig({
       "@iprn/types": path.resolve(__dirname, "../packages/types/src"),
     },
   },
-})
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:8787",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+});
