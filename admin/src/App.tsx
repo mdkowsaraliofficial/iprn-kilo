@@ -1,5 +1,7 @@
 import { HashRouter, useLocation } from "@/lib/router";
+import { useMe } from "@/hooks/use-api";
 import { AdminLayout } from "@app/admin-layout";
+import { useAdminSse } from "@app/lib/sse";
 import { AdminDashboard } from "@app/pages/AdminDashboard";
 import { UsersPage } from "@app/pages/UsersPage";
 import { NumbersPage } from "@app/pages/NumbersPage";
@@ -61,6 +63,8 @@ function AdminRenderer() {
 }
 
 export default function App() {
+  const { data: me } = useMe();
+  useAdminSse(me?.userId);
   return (
     <HashRouter>
       <AdminLayout>

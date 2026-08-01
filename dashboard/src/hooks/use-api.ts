@@ -20,7 +20,7 @@ const swrOptions = {
 };
 
 export function useMe() {
-  return useSWR<UserProfile>("/v1/auth/me", () => apiClient.me(), swrOptions);
+  return useSWR<UserProfile>("/v1/me", () => apiClient.me(), swrOptions);
 }
 
 export function useStats() {

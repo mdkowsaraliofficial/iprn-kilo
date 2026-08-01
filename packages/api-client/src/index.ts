@@ -1,7 +1,8 @@
 import useSWR, { type SWRConfiguration } from 'swr';
 import type {
-  NumberRecord,
-  CountryOperatorSummary,
+   NumberRecord,
+   NumberStatus,
+   CountryOperatorSummary,
   Country,
   Operator,
   SmsMessage,
@@ -179,20 +180,20 @@ function buildQuery(q: Record<string, unknown>): string {
 
 export const apiClient = {
   // Auth
-  me: () => request<UserProfile>('/v1/auth/me'),
+  me: () => request<UserProfile>('/v1/me'),
   updateProfile: (data: { displayName?: string; email?: string; timezone?: string; notificationPreferences?: Record<string, unknown> }) =>
-    request<{ success: boolean }>('/v1/auth/me', { method: 'PUT', body: JSON.stringify(data) }),
+    request<{ success: boolean }>('/v1/me', { method: 'PUT', body: JSON.stringify(data) }),
   login: (data: { email: string; password: string }) =>
-    request<{ accessToken: string; refreshToken: string; user: UserProfile }>('/v1/auth/login', {
+    request<{ accessToken: string; refreshToken: string; user: UserProfile }>('/v1/login', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   register: (data: { email: string; password: string; displayName: string }) =>
-    request<{ accessToken: string; refreshToken: string; user: UserProfile }>('/v1/auth/register', {
+    request<{ accessToken: string; refreshToken: string; user: UserProfile }>('/v1/register', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
-  logout: () => request<{ success: boolean }>('/v1/auth/logout', { method: 'POST' }),
+  logout: () => request<{ success: boolean }>('/v1/logout', { method: 'POST' }),
 
   // Numbers
   listNumbers: (q: Record<string, unknown> = {}) =>
@@ -380,6 +381,10 @@ export const apiClient = {
       request<Operator[]>('/v1/admin/operators' + buildQuery(q)),
     numbers: (q: Record<string, unknown> = {}) =>
       request<NumberRecord[]>('/v1/admin/numbers' + buildQuery(q)),
+    updateNumber: (id: string, data: { status?: NumberStatus; notes?: string | null; qualityScore?: number; assignedUserId?: string | null }) =>
+      request<{ success: boolean }>(`/v1/admin/numbers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    deleteNumber: (id: string) =>
+      request<{ success: boolean }>(`/v1/admin/numbers/${id}`, { method: 'DELETE' }),
     uploadNumbers: (file: File) => {
       const form = new FormData();
       form.append('file', file);
@@ -420,7 +425,7 @@ export function useSWRApi<T>(key: string | null, opts?: SWRConfiguration) {
 }
 
 export function useAuth() {
-  return useSWRApi<UserProfile>('/v1/auth/me', { revalidateOnMount: true });
+  return useSWRApi<UserProfile>('/v1/me', { revalidateOnMount: true });
 }
 export function useStats() {
   return useSWRApi<AnalyticsSummary>('/v1/analytics/summary');
