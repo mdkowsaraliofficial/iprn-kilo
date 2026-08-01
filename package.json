@@ -5,16 +5,21 @@
   "workspaces": [
     "packages/*",
     "worker",
-    "dashboard"
+    "dashboard",
+    "admin"
   ],
   "scripts": {
     "dev:worker": "npm run dev --workspace=worker",
     "dev:dashboard": "npm run dev --workspace=dashboard",
+    "dev:admin": "npm run dev --workspace=admin",
     "build": "npm run build --workspaces",
     "build:worker": "npm run build --workspace=worker",
     "build:dashboard": "npm run build --workspace=dashboard",
-    "lint": "npm run lint --workspaces",
+    "build:admin": "npm run build --workspace=admin",
     "typecheck": "npm run typecheck --workspaces",
+    "typecheck:dashboard": "tsc --noEmit -p dashboard/tsconfig.app.json",
+    "typecheck:admin": "tsc --noEmit -p admin/tsconfig.app.json",
+    "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
     "db:migrate": "npm run db:migrate --workspace=worker",
     "db:seed": "npm run db:seed --workspace=worker"

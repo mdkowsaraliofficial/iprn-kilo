@@ -575,3 +575,105 @@ export const ALL_SETTING_CATEGORIES: SettingCategory[] = [
   'analytics',
   'maintenance',
 ];
+
+// ---------------------------------------------------------------------------
+// API response envelopes (typed to match worker route shapes exactly)
+// ---------------------------------------------------------------------------
+
+export interface AnalyticsSummary {
+  smsCountToday: number;
+  otpCountToday: number;
+  earningsTodayCents: number;
+  earnings7dCents: number;
+  earnings30dCents: number;
+  lifetimeEarningCents: number;
+}
+
+export interface RewardSummary {
+  today: number;
+  yesterday: number;
+  last7Days: number;
+  last30Days: number;
+  lifetime: number;
+}
+
+export interface RewardRuleRef {
+  id: string;
+  level: RewardRuleLevel;
+  target: string | null;
+  baseAmountCents: number;
+  multiplier: number;
+}
+
+export interface RewardDetail {
+  id: string;
+  smsId: string;
+  userId: string;
+  ruleId: string;
+  baseAmountCents: number;
+  countryMultiplier: number;
+  operatorMultiplier: number;
+  userTierMultiplier: number;
+  finalAmountCents: number;
+  status: RewardEventStatus;
+  createdAt: string;
+  rule: RewardRuleRef | null;
+}
+
+export interface WithdrawalSubmitResult {
+  success: boolean;
+  message: string;
+  balanceAfterCents: number;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  status: UserStatus;
+  role: UserRole;
+  numberLimitOverride: number | null;
+  apiEnabled: boolean;
+  tier: string;
+  createdAt: string;
+}
+
+export interface AdminUserDetail extends AdminUser {
+  wallet: WalletBalance;
+  numbers: NumberRecord[];
+}
+
+export interface AdminDelivery {
+  id: string;
+  userId: string;
+  eventType: string;
+  url: string;
+  status: string;
+  attempts: number;
+  lastAttemptAt: string | null;
+  responseStatus: number | null;
+  createdAt: string;
+}
+
+export interface AdminStats {
+  totalUsers: number;
+  totalNumbers: number;
+  totalSms: number;
+  totalOtp: number;
+  totalEarningsCents: number;
+  totalRewardsCents: number;
+}
+
+export interface OtpCode {
+  code: string;
+  smsId: string;
+  numberId: string;
+  createdAt: string;
+}
+
+export interface OperatorAnalytics {
+  operator: string;
+  countryCode: string;
+  smsCount: number;
+  earningsCents: number;
+}
