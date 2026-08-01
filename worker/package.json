@@ -19,15 +19,15 @@
     "@iprn/reward-engine": "*",
     "@iprn/types": "*",
     "@iprn/validators": "*",
-    "hono": "^4.7.0",
-    "zod": "^3.22.4"
+    "hono": "^4.12.33",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@hono/zod-validator": "^1.2.0",
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "@hono/zod-validator": "^0.9.0",
     "@types/cookie": "^0.6.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
-    "@cloudflare/workers-types": "^4.20240416.0"
+    "vitest": "^1.6.0"
   }
 }

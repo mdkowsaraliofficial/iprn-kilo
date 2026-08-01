@@ -1,6 +1,7 @@
 import type { Db } from '../db';
-import type { Env, LogLevel, AuditSeverity } from '../config';
+import type { Env } from '../config';
 import { safeJsonParse, uuid, nowIso } from '../config';
+import type { LogLevel, AuditSeverity } from '@iprn/types';
 
 export class LoggingService {
   constructor(private db: Db, private env: Env) {}
@@ -73,9 +74,15 @@ export function stringifySettingValue(value: unknown): string {
   return JSON.stringify(value);
 }
 
+export interface SimpleKV {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
 export class CacheService {
   constructor(
-    private kv: KVNamespace,
+    private kv: SimpleKV,
     private logging: LoggingService
   ) {}
 

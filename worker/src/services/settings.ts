@@ -1,5 +1,6 @@
 import type { Db } from '../db';
-import type { Env, SystemSetting, SettingCategory } from '../config';
+import type { Env } from '../config';
+import type { SystemSetting, SettingCategory } from '@iprn/types';
 import type { CacheService } from './logging';
 
 const SETTINGS_CACHE_TTL = 60;

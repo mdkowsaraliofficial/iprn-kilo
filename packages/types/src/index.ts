@@ -297,6 +297,13 @@ export interface AnalyticsDay {
   newUsers: number;
 }
 
+export interface AnalyticsByDay {
+  date: string;
+  smsCount: number;
+  otpCount: number;
+  earningsCents: number;
+}
+
 export interface ProviderHealthLog {
   id: string;
   providerId: string;

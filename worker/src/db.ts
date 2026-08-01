@@ -42,13 +42,13 @@ export class Db {
     if (res.error) {
       throw new Error(`D1 query error: ${res.error}`);
     }
-    return mapRows(res.results ?? []);
+    return (res.results ?? []) as T[];
   }
 
   async first<T extends Row = Row>(sql: string, params: unknown[] = []): Promise<T | null> {
     const res = (await this.db.prepare(sql).bind(...params).first()) as T | undefined | null;
     if (res === undefined || res === null) return null;
-    return rowToCamel(res as unknown as Row) as T;
+    return res as T;
   }
 
   async run(sql: string, params: unknown[] = []): Promise<{ success: boolean; meta?: unknown }> {
@@ -77,15 +77,15 @@ export class Db {
         collected.push({ sql, params });
         return Promise.resolve({ success: true });
       },
-      query: async (sql: string, params: unknown[] = []) => {
-        const res = await this.db.prepare(sql).bind(...params).all<Row>();
+      query: async <T2 extends Row = Row>(sql: string, params: unknown[] = []): Promise<T2[]> => {
+        const res = await this.db.prepare(sql).bind(...params).all<T2>();
         if (res.error) throw new Error(`D1 tx query error: ${res.error}`);
-        return mapRows(res.results ?? []);
+        return (res.results ?? []) as T2[];
       },
-      first: async (sql: string, params: unknown[] = []) => {
-        const res = (await this.db.prepare(sql).bind(...params).first()) as Row | undefined | null;
+      first: async <T2 extends Row = Row>(sql: string, params: unknown[] = []): Promise<T2 | null> => {
+        const res = (await this.db.prepare(sql).bind(...params).first()) as T2 | undefined | null;
         if (res === undefined || res === null) return null;
-        return rowToCamel(res as unknown as Row) as Row;
+        return res as T2;
       },
     };
     const result = await fn(tx);

@@ -8,6 +8,7 @@ export const SCHEMA_SQL = [
     number_limit_override INTEGER,
     api_enabled INTEGER NOT NULL DEFAULT 1,
     tier TEXT NOT NULL DEFAULT 'bronze' CHECK (tier IN ('bronze','silver','gold','platinum')),
+    password_hash TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );`,
   `CREATE TABLE IF NOT EXISTS numbers (
@@ -179,6 +180,16 @@ export const SCHEMA_SQL = [
     response_time_ms INTEGER NOT NULL,
     ip TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );`,
+  `CREATE TABLE IF NOT EXISTS webhooks (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    api_key_id TEXT,
+    url TEXT NOT NULL,
+    events TEXT NOT NULL,
+    secret_hash TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );`,
   `CREATE TABLE IF NOT EXISTS webhook_deliveries (
     id TEXT PRIMARY KEY,
@@ -394,6 +405,8 @@ export const INDEX_SQL: string[] = [
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status);`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_next_retry ON webhook_deliveries(next_retry_at);`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created_at ON webhook_deliveries(created_at);`,
+  `CREATE INDEX IF NOT EXISTS idx_webhooks_user ON webhooks(user_id);`,
+  `CREATE INDEX IF NOT EXISTS idx_webhooks_api_key ON webhooks(api_key_id);`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_user_status ON webhook_deliveries(user_id, status);`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_apikey_status ON webhook_deliveries(api_key_id, status);`,
   `CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_retry_time ON webhook_deliveries(next_retry_at, status);`,

@@ -20,8 +20,8 @@ import type {
   AuditLog,
   HealthStatus,
   UserProfile,
-  AnalyticsByDay,
-  IngestSmsRequest,
+   AnalyticsByDay,
+   IngestSmsRequest,
   IngestSmsResponse,
   WebhookConfigInput,
   WithdrawalMethod,
@@ -167,36 +167,36 @@ export const apiClient = {
 
   // Numbers
   listNumbers: (q: Record<string, unknown> = {}) =>
-    request<{ data: NumberRecord[]; meta: PaginationMeta }>('/api/v1/numbers' + buildQuery(q)),
-  availableNumbers: () => request<CountryOperatorSummary[]>('/api/v1/numbers/available'),
+    request<{ data: NumberRecord[]; meta: PaginationMeta }>('/v1/numbers' + buildQuery(q)),
+  availableNumbers: () => request<CountryOperatorSummary[]>('/v1/numbers/available'),
   requestNumber: (data: { countryCode: string; operator: string; quantity?: number }) =>
     request<{ message: string; assigned: NumberRecord[] }>(
-      '/api/v1/numbers/request',
+      '/v1/numbers/request',
       { method: 'POST', body: JSON.stringify(data) }
     ),
-  numberDetail: (id: string) => request<NumberRecord>(`/api/v1/numbers/${id}`),
+  numberDetail: (id: string) => request<NumberRecord>(`/v1/numbers/${id}`),
   releaseNumber: (id: string) =>
-    request<{ success: boolean }>(`/api/v1/numbers/${id}/release`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/v1/numbers/${id}/release`, { method: 'DELETE' }),
 
   // SMS
   listSms: (q: Record<string, unknown> = {}) =>
-    request<{ data: SmsMessage[]; meta: PaginationMeta }>('/api/v1/sms' + buildQuery(q)),
-  latestSms: () => request<SmsMessage | null>('/api/v1/sms/latest'),
-  smsDetail: (id: string) => request<SmsMessage>(`/api/v1/sms/${id}`),
+    request<{ data: SmsMessage[]; meta: PaginationMeta }>('/v1/sms' + buildQuery(q)),
+  latestSms: () => request<SmsMessage | null>('/v1/sms/latest'),
+  smsDetail: (id: string) => request<SmsMessage>(`/v1/sms/${id}`),
   smsByNumber: (numberId: string, q: Record<string, unknown> = {}) =>
     request<{ data: SmsMessage[]; meta: PaginationMeta }>(
-      `/api/v1/sms/by-number/${numberId}` + buildQuery(q)
+      `/v1/sms/by-number/${numberId}` + buildQuery(q)
     ),
 
   // OTP
-  latestOtp: () => request<{ code: string; smsId: string } | null>('/api/v1/otp/latest'),
+  latestOtp: () => request<{ code: string; smsId: string } | null>('/v1/otp/latest'),
   otpHistory: (q: Record<string, unknown> = {}) =>
     request<{ data: { code: string; smsId: string; numberId: string; createdAt: string }[]; meta: PaginationMeta }>(
-      '/api/v1/otp/history' + buildQuery(q)
+      '/v1/otp/history' + buildQuery(q)
     ),
   otpByNumber: (numberId: string) =>
     request<{ code: string; smsId: string; createdAt: string } | null>(
-      `/api/v1/otp/by-number/${numberId}`
+      `/v1/otp/by-number/${numberId}`
     ),
 
   // Wallet
@@ -208,89 +208,89 @@ export const apiClient = {
       lifetimeEarnedCents: number;
       lifetimeWithdrawnCents: number;
       updatedAt: string;
-    }>('/api/v1/wallet'),
+    }>('/v1/wallet'),
   walletTransactions: (q: Record<string, unknown> = {}) =>
-    request<{ data: WalletTransaction[]; meta: PaginationMeta }>('/api/v1/wallet/transactions' + buildQuery(q)),
+    request<{ data: WalletTransaction[]; meta: PaginationMeta }>('/v1/wallet/transactions' + buildQuery(q)),
 
   // Rewards
   rewardEvents: (q: Record<string, unknown> = {}) =>
-    request<{ data: RewardEvent[]; meta: PaginationMeta }>('/api/v1/rewards' + buildQuery(q)),
+    request<{ data: RewardEvent[]; meta: PaginationMeta }>('/v1/rewards' + buildQuery(q)),
   rewardSummary: () =>
     request<{ today: number; yesterday: number; last7Days: number; last30Days: number; lifetime: number }>(
-      '/api/v1/rewards/summary'
+      '/v1/rewards/summary'
     ),
   rewardDetail: (id: string) =>
-    request<{ rule: RewardRule; event: RewardEvent }>(`/api/v1/rewards/${id}`),
+    request<{ rule: RewardRule; event: RewardEvent }>(`/v1/rewards/${id}`),
 
   // Transactions
   transactions: (q: Record<string, unknown> = {}) =>
-    request<{ data: WalletTransaction[]; meta: PaginationMeta }>('/api/v1/transactions' + buildQuery(q)),
+    request<{ data: WalletTransaction[]; meta: PaginationMeta }>('/v1/transactions' + buildQuery(q)),
 
   // Withdrawals
   createWithdrawal: (data: { method: WithdrawalMethod; address: string; amountCents: number }) =>
-    request<WithdrawalRequest>('/api/v1/withdrawals', {
+    request<WithdrawalRequest>('/v1/withdrawals', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
   listWithdrawals: (q: Record<string, unknown> = {}) =>
-    request<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/api/v1/withdrawals' + buildQuery(q)),
-  withdrawalDetail: (id: string) => request<WithdrawalRequest>(`/api/v1/withdrawals/${id}`),
+    request<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/v1/withdrawals' + buildQuery(q)),
+  withdrawalDetail: (id: string) => request<WithdrawalRequest>(`/v1/withdrawals/${id}`),
 
   // Webhooks
   listWebhooks: () =>
-    request<Array<WebhookConfigInput & { id: string; createdAt: string }>>('/api/v1/webhooks'),
+    request<Array<WebhookConfigInput & { id: string; createdAt: string }>>('/v1/webhooks'),
   createWebhook: (data: WebhookConfigInput) =>
     request<{ id: string; url: string; events: string[]; secret: string }>(
-      '/api/v1/webhooks',
+      '/v1/webhooks',
       { method: 'POST', body: JSON.stringify(data) }
     ),
   updateWebhook: (id: string, data: Partial<WebhookConfigInput>) =>
     request<{ id: string; url: string; events: string[] }>(
-      `/api/v1/webhooks/${id}`,
+      `/v1/webhooks/${id}`,
       { method: 'PUT', body: JSON.stringify(data) }
     ),
   deleteWebhook: (id: string) =>
-    request<{ success: boolean }>(`/api/v1/webhooks/${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/v1/webhooks/${id}`, { method: 'DELETE' }),
   webhookDeliveries: (id: string, q: Record<string, unknown> = {}) =>
     request<{ data: WebhookDelivery[]; meta: PaginationMeta }>(
-      `/api/v1/webhooks/${id}/deliveries` + buildQuery(q)
+      `/v1/webhooks/${id}/deliveries` + buildQuery(q)
     ),
   testWebhook: (id: string) =>
-    request<{ status: string }>(`/api/v1/webhooks/${id}/test`, { method: 'POST' }),
+    request<{ status: string }>(`/v1/webhooks/${id}/test`, { method: 'POST' }),
 
   // API Keys
   listApiKeys: () =>
-    request<Array<ApiKey & { keyPrefixDisplay: string }>>('/api/v1/api-keys'),
+    request<Array<ApiKey & { keyPrefixDisplay: string }>>('/v1/api-keys'),
   createApiKey: (data: { name: string; permissions?: string[] }) =>
     request<{ id: string; keyId: string; keyPrefix: string; secret: string }>(
-      '/api/v1/api-keys',
+      '/v1/api-keys',
       { method: 'POST', body: JSON.stringify(data) }
     ),
   deleteApiKey: (id: string) =>
-    request<{ success: boolean }>(`/api/v1/api-keys/${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/v1/api-keys/${id}`, { method: 'DELETE' }),
   rotateApiKey: (id: string) =>
     request<{ id: string; keyPrefix: string; secret: string }>(
-      `/api/v1/api-keys/${id}/rotate`,
+      `/v1/api-keys/${id}/rotate`,
       { method: 'POST' }
     ),
   apiKeyUsage: (id: string) =>
     request<{ totalRequests: number; requestsToday: number; topEndpoints: Array<{ endpoint: string; count: number }> }>(
-      `/api/v1/api-keys/${id}/usage`
+      `/v1/api-keys/${id}/usage`
     ),
   apiKeyLogs: (id: string, q: Record<string, unknown> = {}) =>
     request<{ data: Array<{ endpoint: string; method: string; statusCode: number; responseTimeMs: number; createdAt: string }>; meta: PaginationMeta }>(
-      `/api/v1/api-keys/${id}/logs` + buildQuery(q)
+      `/v1/api-keys/${id}/logs` + buildQuery(q)
     ),
 
   // Notifications
   listNotifications: (q: Record<string, unknown> = {}) =>
-    request<{ data: Notification[]; meta: PaginationMeta }>('/api/v1/notifications' + buildQuery(q)),
+    request<{ data: Notification[]; meta: PaginationMeta }>('/v1/notifications' + buildQuery(q)),
   markNotificationRead: (id: string) =>
-    request<{ success: boolean }>(`/api/v1/notifications/${id}/read`, { method: 'PUT' }),
+    request<{ success: boolean }>(`/v1/notifications/${id}/read`, { method: 'PUT' }),
   markAllNotificationsRead: () =>
-    request<{ success: boolean }>('/api/v1/notifications/read-all', { method: 'PUT' }),
+    request<{ success: boolean }>('/v1/notifications/read-all', { method: 'PUT' }),
   deleteNotification: (id: string) =>
-    request<{ success: boolean }>(`/api/v1/notifications/${id}`, { method: 'DELETE' }),
+    request<{ success: boolean }>(`/v1/notifications/${id}`, { method: 'DELETE' }),
 
   // Analytics
   analyticsSummary: () =>
@@ -301,95 +301,94 @@ export const apiClient = {
       earnings7dCents: number;
       earnings30dCents: number;
       lifetimeEarningCents: number;
-    }>('/api/v1/analytics/summary'),
+    }>('/v1/analytics/summary'),
   analyticsSmsByDay: (q: { from?: string; to?: string }) =>
-    request<AnalyticsByDay[]>('/api/v1/analytics/sms-by-day' + buildQuery(q)),
+    request<AnalyticsByDay[]>('/v1/analytics/sms-by-day' + buildQuery(q)),
   analyticsEarningsByDay: (q: { from?: string; to?: string }) =>
-    request<AnalyticsByDay[]>('/api/v1/analytics/earnings-by-day' + buildQuery(q)),
+    request<AnalyticsByDay[]>('/v1/analytics/earnings-by-day' + buildQuery(q)),
   analyticsByCountry: (q: { from?: string; to?: string }) =>
-    request<CountryOperatorSummary[]>('/api/v1/analytics/sms-by-country' + buildQuery(q)),
+    request<CountryOperatorSummary[]>('/v1/analytics/sms-by-country' + buildQuery(q)),
   analyticsByOperator: (q: { from?: string; to?: string }) =>
-    request<CountryOperatorSummary[]>('/api/v1/analytics/sms-by-operator' + buildQuery(q)),
+    request<CountryOperatorSummary[]>('/v1/analytics/sms-by-operator' + buildQuery(q)),
 
   // Settings
-  profile: () => request<UserProfile>('/api/v1/settings/profile'),
-  updateProfile: (data: Partial<UserProfile>) =>
-    request<UserProfile>('/api/v1/settings/profile', { method: 'PUT', body: JSON.stringify(data) }),
-  updateNotificationPrefs: (data: Record<string, unknown>) =>
-    request<Record<string, unknown>>('/api/v1/settings/notifications', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
+  settings: {
+    profile: () => request<UserProfile>('/v1/settings/profile'),
+    updateProfile: (data: Partial<UserProfile>) =>
+      request<UserProfile>('/v1/settings/profile', { method: 'PUT', body: JSON.stringify(data) }),
+    updateNotificationPrefs: (data: Record<string, unknown>) =>
+      request<Record<string, unknown>>('/v1/settings/notifications', { method: 'PUT', body: JSON.stringify(data) }),
+  },
 
   // Ingest
   ingestSms: (data: IngestSmsRequest) =>
-    request<IngestSmsResponse>('/api/v1/ingest/sms', { method: 'POST', body: JSON.stringify(data) }),
+    request<IngestSmsResponse>('/v1/ingest/sms', { method: 'POST', body: JSON.stringify(data) }),
 
   // Public
-  health: () => request<HealthStatus>('/api/v1/public/health'),
-  countries: () => request<Country[]>('/api/v1/public/countries'),
+  health: () => request<HealthStatus>('/v1/public/health'),
+  countries: () => request<Country[]>('/v1/public/countries'),
   operators: (country: string) =>
-    request<Operator[]>(`/api/v1/public/operators/${country}`),
+    request<Operator[]>(`/v1/public/operators/${country}`),
 
   // Admin
   admin: {
     users: () =>
-      request<Array<User & { tier: string; numberLimit: number }>>('/api/v1/admin/users'),
+      request<Array<User & { tier: string; numberLimit: number }>>('/v1/admin/users'),
     userDetail: (id: string) =>
       request<User & { tier: string; numberLimit: number; wallet: WalletBalance }>(
-        `/api/v1/admin/users/${id}`
+        `/v1/admin/users/${id}`
       ),
     updateUser: (id: string, data: Record<string, unknown>) =>
-      request<User>(`/api/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      request<User>(`/v1/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     adjustWallet: (userId: string, data: { type: string; amountCents: number; reason: string }) =>
-      request<{ success: boolean }>(`/api/v1/admin/wallet/${userId}/adjust`, {
+      request<{ success: boolean }>(`/v1/admin/wallet/${userId}/adjust`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
     rewardRules: (q: Record<string, unknown> = {}) =>
-      request<{ data: RewardRule[]; meta: PaginationMeta }>('/api/v1/admin/reward-rules' + buildQuery(q)),
+      request<{ data: RewardRule[]; meta: PaginationMeta }>('/v1/admin/reward-rules' + buildQuery(q)),
     createRewardRule: (data: Record<string, unknown>) =>
-      request<RewardRule>('/api/v1/admin/reward-rules', { method: 'POST', body: JSON.stringify(data) }),
+      request<RewardRule>('/v1/admin/reward-rules', { method: 'POST', body: JSON.stringify(data) }),
     updateRewardRule: (id: string, data: Record<string, unknown>) =>
-      request<RewardRule>(`/api/v1/admin/reward-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      request<RewardRule>(`/v1/admin/reward-rules/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteRewardRule: (id: string) =>
-      request<{ success: boolean }>(`/api/v1/admin/reward-rules/${id}`, { method: 'DELETE' }),
-    providers: () => request<Provider[]>('/api/v1/admin/providers'),
-    countries: () => request<Country[]>('/api/v1/admin/countries'),
+      request<{ success: boolean }>(`/v1/admin/reward-rules/${id}`, { method: 'DELETE' }),
+    providers: () => request<Provider[]>('/v1/admin/providers'),
+    countries: () => request<Country[]>('/v1/admin/countries'),
     operators: (q: Record<string, unknown> = {}) =>
-      request<{ data: Operator[]; meta: PaginationMeta }>('/api/v1/admin/operators' + buildQuery(q)),
+      request<{ data: Operator[]; meta: PaginationMeta }>('/v1/admin/operators' + buildQuery(q)),
     numbers: (q: Record<string, unknown> = {}) =>
-      request<{ data: NumberRecord[]; meta: PaginationMeta }>('/api/v1/admin/numbers' + buildQuery(q)),
+      request<{ data: NumberRecord[]; meta: PaginationMeta }>('/v1/admin/numbers' + buildQuery(q)),
     uploadNumbers: (file: File) => {
       const form = new FormData();
       form.append('file', file);
-      return request<{ imported: number; errors: string[] }>('/api/v1/admin/numbers/import', {
+      return request<{ imported: number; errors: string[] }>('/v1/admin/numbers/import', {
         method: 'POST',
         body: form as unknown as BodyInit,
       });
     },
     systemStats: () =>
-      request<{ totalUsers: number; totalNumbers: number; totalSms: number; totalOtp: number; totalEarningsCents: number; totalRewardsCents: number }>('/api/v1/admin/stats'),
+      request<{ totalUsers: number; totalNumbers: number; totalSms: number; totalOtp: number; totalEarningsCents: number; totalRewardsCents: number }>('/v1/admin/stats'),
     auditLogs: (q: Record<string, unknown> = {}) =>
-      request<{ data: AuditLog[]; meta: PaginationMeta }>('/api/v1/admin/audit-logs' + buildQuery(q)),
+      request<{ data: AuditLog[]; meta: PaginationMeta }>('/v1/admin/audit-logs' + buildQuery(q)),
     systemLogs: (q: Record<string, unknown> = {}) =>
-      request<{ data: SystemLog[]; meta: PaginationMeta }>('/api/v1/admin/system-logs' + buildQuery(q)),
+      request<{ data: SystemLog[]; meta: PaginationMeta }>('/v1/admin/system-logs' + buildQuery(q)),
     allWithdrawals: (q: Record<string, unknown> = {}) =>
-      request<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/api/v1/admin/withdrawals' + buildQuery(q)),
+      request<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/v1/admin/withdrawals' + buildQuery(q)),
     reviewWithdrawal: (id: string, data: { status: string; reason?: string }) =>
-      request<WithdrawalRequest>(`/api/v1/admin/withdrawals/${id}/review`, {
+      request<WithdrawalRequest>(`/v1/admin/withdrawals/${id}/review`, {
         method: 'POST',
         body: JSON.stringify(data),
       }),
     allWebhooks: () =>
-      request<Array<{ id: string; userId: string; url: string; events: string[] }>>('/api/v1/admin/webhooks'),
+      request<Array<{ id: string; userId: string; url: string; events: string[] }>>('/v1/admin/webhooks'),
     allDeliveries: (q: Record<string, unknown> = {}) =>
-      request<{ data: WebhookDelivery[]; meta: PaginationMeta }>('/api/v1/admin/webhook-deliveries' + buildQuery(q)),
-    systemSettings: () => request<SystemSetting[]>('/api/v1/admin/system-settings'),
+      request<{ data: WebhookDelivery[]; meta: PaginationMeta }>('/v1/admin/webhook-deliveries' + buildQuery(q)),
+    systemSettings: () => request<SystemSetting[]>('/v1/admin/system-settings'),
     updateSetting: (key: string, data: { value: unknown; description?: string }) =>
-      request<SystemSetting>(`/api/v1/admin/system-settings/${key}`, { method: 'PUT', body: JSON.stringify(data) }),
+      request<SystemSetting>(`/v1/admin/system-settings/${key}`, { method: 'PUT', body: JSON.stringify(data) }),
     sendNotification: (data: { type: string; title: string; body: string; userIds?: string[]; data?: Record<string, unknown> }) =>
-      request<{ sent: number }>(`/api/v1/admin/notifications/send`, { method: 'POST', body: JSON.stringify(data) }),
+      request<{ sent: number }>(`/v1/admin/notifications/send`, { method: 'POST', body: JSON.stringify(data) }),
   },
 } as const;
 
@@ -400,10 +399,10 @@ export function useSWRApi<T>(key: string | null, opts?: SWRConfiguration) {
 }
 
 export function useAuth() {
-  return useSWRApi<User>('/api/v1/auth/me', { revalidateOnMount: true });
+  return useSWRApi<User>('/v1/auth/me', { revalidateOnMount: true });
 }
 export function useStats() {
-  return useSWRApi<{ totalNumbers: number; totalSms: number; totalVoice: number }>('/api/v1/analytics/summary');
+  return useSWRApi<{ totalNumbers: number; totalSms: number; totalVoice: number }>('/v1/analytics/summary');
 }
 export function useEarnings() {
   return useSWRApi<{
@@ -412,23 +411,23 @@ export function useEarnings() {
     last7Days: number;
     last30Days: number;
     lifetime: number;
-  }>('/api/v1/rewards/summary');
+  }>('/v1/rewards/summary');
 }
 export function useNumbers(q: Record<string, unknown> = {}) {
   const qs = buildQuery(q);
-  return useSWRApi<{ data: NumberRecord[]; meta: PaginationMeta }>('/api/v1/numbers' + qs);
+  return useSWRApi<{ data: NumberRecord[]; meta: PaginationMeta }>('/v1/numbers' + qs);
 }
 export function useLatestSms() {
-  return useSWRApi<SmsMessage | null>('/api/v1/sms/latest');
+  return useSWRApi<SmsMessage | null>('/v1/sms/latest');
 }
 export function useLatestOtp() {
-  return useSWRApi<{ code: string; smsId: string } | null>('/api/v1/otp/latest');
+  return useSWRApi<{ code: string; smsId: string } | null>('/v1/otp/latest');
 }
 export function useNotifications() {
-  return useSWRApi<{ data: Notification[]; meta: PaginationMeta }>('/api/v1/notifications?limit=20');
+  return useSWRApi<{ data: Notification[]; meta: PaginationMeta }>('/v1/notifications?limit=20');
 }
 export function useWithdrawals() {
-  return useSWRApi<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/api/v1/withdrawals?limit=20');
+  return useSWRApi<{ data: WithdrawalRequest[]; meta: PaginationMeta }>('/v1/withdrawals?limit=20');
 }
 export function useWalletBalance() {
   return useSWRApi<{
@@ -437,21 +436,21 @@ export function useWalletBalance() {
     frozenCents: number;
     lifetimeEarnedCents: number;
     lifetimeWithdrawnCents: number;
-  }>('/api/v1/wallet');
+  }>('/v1/wallet');
 }
 export function useCountries() {
-  return useSWRApi<CountryOperatorSummary[]>('/api/v1/numbers/available');
+  return useSWRApi<CountryOperatorSummary[]>('/v1/numbers/available');
 }
 export function useRewardEvents(q: Record<string, unknown> = {}) {
   const qs = buildQuery(q);
-  return useSWRApi<{ data: RewardEvent[]; meta: PaginationMeta }>('/api/v1/rewards' + qs);
+  return useSWRApi<{ data: RewardEvent[]; meta: PaginationMeta }>('/v1/rewards' + qs);
 }
 export function useTransactions(q: Record<string, unknown> = {}) {
   const qs = buildQuery(q);
-  return useSWRApi<{ data: WalletTransaction[]; meta: PaginationMeta }>('/api/v1/transactions' + qs);
+  return useSWRApi<{ data: WalletTransaction[]; meta: PaginationMeta }>('/v1/transactions' + qs);
 }
 export function useAlerts() {
-  return useSWRApi<{ status: string } | null>('/api/v1/admin/system-stats');
+  return useSWRApi<{ status: string } | null>('/v1/admin/stats');
 }
 
 export { fetcher };

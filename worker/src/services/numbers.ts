@@ -1,6 +1,7 @@
 import type { Db } from '../db';
-import type { Env, NumberRecord, NumberAssignment, CountryOperatorSummary } from '../config';
+import type { Env } from '../config';
 import { uuid, nowIso } from '../config';
+import type { NumberRecord, NumberAssignment, CountryOperatorSummary } from '@iprn/types';
 import type { NumberRequestInput } from '@iprn/types';
 import type { SettingsService } from './settings';
 
@@ -79,7 +80,7 @@ export class NumbersService {
     }
 
     const assigned: NumberRecord[] = [];
-    await this.db.batch(async (tx) => {
+    await this.db.tx(async (tx) => {
       for (const row of rows) {
         const assignmentId = `assign_${uuid()}`;
         await tx.run(
@@ -113,7 +114,7 @@ export class NumbersService {
       err.status = 404;
       throw err;
     }
-    await this.db.batch(async (tx) => {
+    await this.db.tx(async (tx) => {
       await tx.run(
         'UPDATE numbers SET status = ?, assigned_user_id = NULL, last_sms_at = NULL WHERE id = ?',
         ['available', numberId]
@@ -152,7 +153,7 @@ export class NumbersService {
       errors.push(`Provider ${numbers[0]?.providerId} does not exist`);
       return { imported: 0, errors };
     }
-    await this.db.batch(async (tx) => {
+    await this.db.tx(async (tx) => {
       for (const n of numbers) {
         try {
           await tx.run(

@@ -1,7 +1,9 @@
 import type { Db } from '../db';
-import type { Env, User, ApiKey, DEMO_USER_ID } from '../config';
-import { sha256Hex } from '../config';
+import type { Env } from '../config';
+import { DEMO_USER_ID, sha256Hex, hashPassword, verifyPassword, generateToken, nowIso, uuid } from '../config';
+import type { User, ApiKey } from '@iprn/types';
 import type { SettingsService } from './settings';
+import type { LoggingService } from './logging';
 
 export interface AuthPrincipal {
   user: User;
@@ -10,7 +12,7 @@ export interface AuthPrincipal {
 }
 
 export class AuthService {
-  constructor(private db: Db, private env: Env, private settings: SettingsService) {}
+  constructor(private db: Db, private env: Env, private settings: SettingsService, private logging: LoggingService) {}
 
   async validateApiKey(keyId: string, secret: string): Promise<{ user: User; apiKey: ApiKey } | null> {
     const row = await this.db.first<{
@@ -61,8 +63,13 @@ export class AuthService {
   }
 
   async validateToken(token: string): Promise<{ user: User; apiKey: ApiKey | null } | null> {
-    // Future-ready stub: JWT validation. For now returns null.
-    return null;
+    const stored = await this.env.SESSION_KV.get(`sess:${token}`);
+    if (!stored) return null;
+    let payload: any;
+    try { payload = JSON.parse(stored); } catch { return null; }
+    const user = await this.getUser(payload.userId);
+    if (!user) return null;
+    return { user, apiKey: null };
   }
 
   async getUser(userId: string): Promise<User | null> {
@@ -118,6 +125,62 @@ export class AuthService {
       lastUsedAt: row.last_used_at,
       createdAt: row.created_at,
     };
+  }
+
+  async register(data: { email: string; password: string; displayName: string }): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+    const existing = await this.db.first<{ id: string }>('SELECT id FROM users WHERE email = ?', [data.email]);
+    if (existing) {
+      const err: any = new Error('Email already registered');
+      err.code = 'CONFLICT';
+      err.status = 409;
+      throw err;
+    }
+    const userId = `user_${uuid()}`;
+    const passwordHash = await hashPassword(data.password);
+    const tier = await this.settings.get<string>('default_user_tier') ?? 'bronze';
+    await this.db.run(
+      'INSERT INTO users (id, email, display_name, status, role, number_limit_override, api_enabled, tier, password_hash, created_at) VALUES (?, ?, ?, ?, ?, NULL, 1, ?, ?, ?)',
+      [userId, data.email, data.displayName, 'active', 'user', tier, passwordHash, nowIso()]
+    );
+    await this.db.run(
+      'INSERT INTO wallet_balances (user_id, pending_cents, approved_cents, frozen_cents, lifetime_earned_cents, lifetime_withdrawn_cents, updated_at) VALUES (?, 0, 0, 0, 0, 0, ?)',
+      [userId, nowIso()]
+    );
+
+    const accessToken = await generateToken();
+    const refreshToken = await generateToken();
+    await this.env.SESSION_KV.put(`sess:${accessToken}`, JSON.stringify({ userId, role: 'user', tokenId: accessToken }), { expirationTtl: 3600 });
+    await this.env.SESSION_KV.put(`rsess:${refreshToken}`, JSON.stringify({ userId, role: 'user', tokenId: refreshToken }), { expirationTtl: 86400 });
+
+    await this.logging.audit(userId, 'user.register', 'user', userId, { email: data.email, displayName: data.displayName }, null, null, 'info');
+    const user = await this.getUser(userId);
+    return { user: user!, accessToken, refreshToken };
+  }
+
+  async login(data: { email: string; password: string; totpCode?: string }): Promise<{ user: User; accessToken: string; refreshToken: string } | null> {
+    const row = await this.db.first<{ id: string; password_hash: string | null; status: string; role: string }>(
+      'SELECT id, password_hash, status, role FROM users WHERE email = ?',
+      [data.email]
+    );
+    if (!row || !row.password_hash) return null;
+    const valid = await verifyPassword(data.password, row.password_hash);
+    if (!valid) return null;
+    const accessToken = await generateToken();
+    const refreshToken = await generateToken();
+    await this.env.SESSION_KV.put(`sess:${accessToken}`, JSON.stringify({ userId: row.id, role: row.role, tokenId: accessToken }), { expirationTtl: 3600 });
+    await this.env.SESSION_KV.put(`rsess:${refreshToken}`, JSON.stringify({ userId: row.id, role: row.role, tokenId: refreshToken }), { expirationTtl: 86400 });
+    const user = await this.getUser(row.id);
+    return { user: user!, accessToken, refreshToken };
+  }
+
+  async refresh(refreshToken: string): Promise<{ accessToken: string; refreshToken: string } | null> {
+    const stored = await this.env.SESSION_KV.get(`rsess:${refreshToken}`);
+    if (!stored) return null;
+    let payload: any;
+    try { payload = JSON.parse(stored); } catch { return null; }
+    const newAccess = await generateToken();
+    await this.env.SESSION_KV.put(`sess:${newAccess}`, JSON.stringify({ userId: payload.userId, role: payload.role, tokenId: newAccess }), { expirationTtl: 3600 });
+    return { accessToken: newAccess, refreshToken };
   }
 
   async resolvePrincipal(req: Request): Promise<AuthPrincipal> {

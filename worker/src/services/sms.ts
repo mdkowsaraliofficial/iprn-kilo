@@ -1,6 +1,7 @@
 import type { Db } from '../db';
-import type { Env, SmsMessage } from '../config';
+import type { Env } from '../config';
 import { uuid, nowIso } from '../config';
+import type { SmsMessage } from '@iprn/types';
 import type { SettingsService } from './settings';
 import type { LoggingService } from './logging';
 

@@ -497,7 +497,7 @@ export const RewardRuleCreateSchema = z.object({
   target: z.string().nullable(),
   baseAmountCents: z.number().int().min(0),
   multiplier: z.number().positive(),
-  priority: z.number().integer(),
+  priority: z.number().int(),
   active: z.boolean().default(true),
   validFrom: z.string().nullable().optional(),
   validTo: z.string().nullable().optional(),
@@ -640,9 +640,10 @@ function cryptoRandomString(length: number): string {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
   for (let i = 0; i < length; i++) {
-    array[i] = Math.floor(Math.random() * chars.length);
-    result += chars[array[i]];
+    const idx = array[i] ?? 0;
+    result += chars[idx % chars.length];
   }
   return result;
 }
