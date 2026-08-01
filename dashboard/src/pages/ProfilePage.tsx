@@ -45,7 +45,7 @@ export function ProfilePage() {
   async function onSubmit(values: ProfileFormValues) {
     try {
       await apiClient.settings.updateProfile(values);
-      mutate("/v1/auth/me");
+      mutate("/v1/me");
       toast.success("Profile updated");
     } catch (e) {
       toast.error("Failed to update profile");

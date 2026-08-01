@@ -25,7 +25,7 @@ export function ProfilePage() {
   async function save() {
     try {
       await apiClient.settings.updateProfile({ displayName, email });
-      mutate("/v1/auth/me");
+      mutate("/v1/me");
       toast.success("Profile updated");
     } catch (e) {
       toast.error("Failed to update profile");
