@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@iprn/api-client": path.resolve(__dirname, "../packages/api-client/src"),
+      "@iprn/types": path.resolve(__dirname, "../packages/types/src"),
     },
   },
 })
