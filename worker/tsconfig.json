@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "declaration": false,
+    "sourceMap": true,
+    "types": ["@cloudflare/workers-types", "vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@iprn/types": ["../packages/types/src"],
+      "@iprn/validators": ["../packages/validators/src"],
+      "@iprn/reward-engine": ["../packages/reward-engine/src"],
+      "@iprn/api-client": ["../packages/api-client/src"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

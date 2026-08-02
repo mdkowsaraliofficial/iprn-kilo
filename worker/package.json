@@ -1,0 +1,34 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "db:migrate": "bash scripts/migrate.sh",
+    "db:seed": "wrangler d1 execute IPRN_PRODUCTION --file=migrations/0030_seed.sql",
+    "stage:assets": "bash scripts/stage-assets.sh",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@iprn/api-client": "*",
+    "@iprn/reward-engine": "*",
+    "@iprn/types": "*",
+    "@iprn/validators": "*",
+    "hono": "^4.12.33",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260801.1",
+    "@hono/zod-validator": "^0.9.0",
+    "@types/cookie": "^0.6.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  }
+}
