@@ -6,8 +6,7 @@ logpush = true
 [vars]
 APP_NAME = "IPRN Online"
 APP_VERSION = "1.0.0"
-# Secrets (e.g. ADMIN_TOKEN) are set via `wrangler secret put` for production
-# and via worker/.dev.vars for local dev. Never commit secrets here.
+# ADMIN_TOKEN is a secret (set via `wrangler secret put`); never commit it.
 
 [[d1_databases]]
 binding = "DB"
@@ -22,52 +21,48 @@ binding = "RATE_LIMIT_KV"
 [[kv_namespaces]]
 binding = "SESSION_KV"
 
+# Queue producers (senders exposed on env.<BINDING>)
 [[queues.producers]]
-queue = "REWARD_PROCESSING_QUEUE"
+queue = "reward-processing-queue"
 binding = "REWARD_PROCESSING_QUEUE"
 
 [[queues.producers]]
-queue = "WEBHOOK_DELIVERY_QUEUE"
+queue = "webhook-delivery-queue"
 binding = "WEBHOOK_DELIVERY_QUEUE"
 
 [[queues.producers]]
-queue = "ANALYTICS_QUEUE"
+queue = "analytics-queue"
 binding = "ANALYTICS_QUEUE"
 
-# FRAUD_QUEUE is the dead-letter queue for WEBHOOK_DELIVERY_QUEUE; it is
-# referenced by name (dead_letter_queue) and also bound for inspection.
-[[queues.producers]]
-queue = "FRAUD_QUEUE"
-binding = "FRAUD_QUEUE"
+# FRAUD_QUEUE is a dead-letter sink only (referenced by name via dead_letter_queue).
+# It is not produced to or consumed by this Worker, so it has no binding here.
+# A single Consumer (`queue` handler on src/index.ts) receives batches from the
+# three queues below and dispatches on `batch.queue`.
 
-# Queue consumers (wrangler v4 schema: queues = { producers, consumers })
 [[queues.consumers]]
-queue = "WEBHOOK_DELIVERY_QUEUE"
+queue = "webhook-delivery-queue"
 max_batch_size = 100
 max_batch_timeout = 30
 max_retries = 5
-dead_letter_queue = "FRAUD_QUEUE"
+dead_letter_queue = "fraud-queue"
 
 [[queues.consumers]]
-queue = "REWARD_PROCESSING_QUEUE"
+queue = "reward-processing-queue"
 max_batch_size = 50
 max_batch_timeout = 15
 max_retries = 3
 
 [[queues.consumers]]
-queue = "ANALYTICS_QUEUE"
+queue = "analytics-queue"
 max_batch_size = 100
 max_batch_timeout = 30
 max_retries = 3
-
-[triggers]
-crons = ["*/1 * * * *"]
 
 [assets]
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "none"
 
-# Add a production custom-domain route per environment, e.g.:
+# Production custom-domain route (add per environment), e.g.:
 #   npx wrangler route add "api.example.com/*" iprn-worker
 # Do NOT commit a placeholder zone: it makes `wrangler deploy` fail to resolve it.
