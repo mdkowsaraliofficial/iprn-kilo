@@ -5,14 +5,14 @@
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {
-    "dev": "wrangler dev",
-    "build": "wrangler deploy --dry-run",
-    "deploy": "wrangler deploy",
+    "dev": "npx wrangler dev",
+    "build": "npx wrangler deploy --dry-run",
+    "deploy": "npx wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext .ts",
-    "db:migrate": "bash scripts/migrate.sh",
-    "db:seed": "wrangler d1 execute IPRN_PRODUCTION --file=migrations/0030_seed.sql",
-    "stage:assets": "bash scripts/stage-assets.sh",
+    "db:migrate": "powershell -ExecutionPolicy Bypass -File scripts/migrate.ps1",
+    "db:seed": "npx wrangler d1 execute iprn_production --remote --file=migrations/0030_seed.sql",
+    "stage:assets": "powershell -ExecutionPolicy Bypass -File scripts/stage-assets.ps1",
     "test": "vitest run"
   },
   "dependencies": {
