@@ -9,7 +9,6 @@ export interface Env {
   REWARD_PROCESSING_QUEUE: Queue<any>;
   WEBHOOK_DELIVERY_QUEUE: Queue<any>;
   ANALYTICS_QUEUE: Queue<any>;
-  FRAUD_QUEUE: Queue<any>;
   APP_NAME: string;
   APP_VERSION: string;
   ADMIN_TOKEN: string;

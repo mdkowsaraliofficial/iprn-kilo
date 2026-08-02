@@ -214,43 +214,24 @@ export default {
     return resp;
   },
 
-  async WEBHOOK_DELIVERY_QUEUE(batch: { messages: Array<{ body: unknown }> }, env: Env, ctx: ExecutionContext): Promise<void> {
+  async queue(batch: { queue: string; messages: Array<{ body: unknown; retry: () => void }> }, env: Env, ctx: ExecutionContext): Promise<void> {
     void ctx;
     const services = getServices(env);
     await services.initialized.catch(() => {});
+    const qn = batch.queue;
     for (const msg of batch.messages) {
-      try { await deliverWebhook(services, msg.body); } catch { /* retry via queue re-delivery */ }
+      if (qn === 'webhook-delivery-queue') {
+        try { await deliverWebhook(services, msg.body); } catch (e) { console.error('[webhook-delivery-error]', e); msg.retry(); }
+      } else if (qn === 'reward-processing-queue') {
+        try { await services.ingest.ingestSms(msg.body as IngestSmsRequest); } catch (e) { console.error('[sms-ingest-error]', e); msg.retry(); }
+      } else if (qn === 'analytics-queue') {
+        try { await services.logging.log('info', 'analytics', JSON.stringify(msg.body)); } catch (e) { console.error('[analytics-error]', e); }
+      }
     }
-  },
-
-  async REWARD_PROCESSING_QUEUE(batch: { messages: Array<{ body: unknown }> }, env: Env, ctx: ExecutionContext): Promise<void> {
-    void ctx;
-    const services = getServices(env);
-    await services.initialized.catch(() => {});
-    for (const msg of batch.messages) {
-      try { await services.ingest.ingestSms(msg.body as IngestSmsRequest); } catch (e) { console.error('[sms-ingest-error]', e); }
-    }
-  },
-
-  async ANALYTICS_QUEUE(batch: { messages: Array<{ body: unknown }> }, env: Env, ctx: ExecutionContext): Promise<void> {
-    void ctx;
-    const services = getServices(env);
-    await services.initialized.catch(() => {});
-    for (const msg of batch.messages) {
-      try { await services.logging.log('info', 'analytics', JSON.stringify(msg.body)); } catch (e) { console.error('[analytics-error]', e); }
-    }
-  },
-
-  async scheduled(_event: any, env: Env, _ctx: ExecutionContext): Promise<void> {
-    const services = getServices(env);
-    await services.initialized.catch(() => {});
   },
 } as Export;
 
 interface Export {
   fetch: (request: Request, env: Env, ctx: ExecutionContext) => Promise<Response>;
-  WEBHOOK_DELIVERY_QUEUE: (batch: { messages: Array<{ body: unknown }> }, env: Env, ctx: ExecutionContext) => Promise<void>;
-  REWARD_PROCESSING_QUEUE: (batch: { messages: Array<{ body: unknown }> }, env: Env, ctx: ExecutionContext) => Promise<void>;
-  ANALYTICS_QUEUE: (batch: { messages: Array<{ body: unknown }> }, env: Env, ctx: ExecutionContext) => Promise<void>;
-  scheduled: (event: any, env: Env, ctx: ExecutionContext) => Promise<void>;
+  queue: (batch: { queue: string; messages: Array<{ body: unknown; retry: () => void }> }, env: Env, ctx: ExecutionContext) => Promise<void>;
 }
