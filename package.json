@@ -23,8 +23,8 @@
     "test": "npm run test --workspaces",
     "db:migrate": "npm run db:migrate --workspace=worker",
     "db:seed": "npm run db:seed --workspace=worker",
-    "stage:assets": "bash worker/scripts/stage-assets.sh",
-    "deploy:production": "bash scripts/deploy.sh"
+    "stage:assets": "powershell -ExecutionPolicy Bypass -File worker/scripts/stage-assets.ps1",
+    "deploy:production": "powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1"
   },
   "devDependencies": {
     "typescript": "^5.4.0",

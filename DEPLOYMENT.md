@@ -1,138 +1,135 @@
-# Deployment Checklist — iprn-online
+# Deployment Checklist — iprn-online (Windows PowerShell)
 
-Cloudflare Workers + D1 + KV + Queues + (dashboard + admin) static assets served from the Worker.
+Cloudflare Workers + D1 + KV + Queues. The Worker also serves the dashboard (`/dashboard`)
+and admin (`/admin`) static assets from `worker/public` (single origin as `/api/v1`).
 
-> Status in this sandbox: `wrangler deploy --dry-run` validates the config, bundle, and staged assets with no errors. The **real upload** requires Cloudflare authentication + real resource IDs, which cannot be produced without `wrangler login` against a real account — those steps are marked **[ACCOUNT]**.
+> All deployment is driven by PowerShell scripts. No bash/sh/cp/mkdir/rm is used by the
+> deploy path. Verified locally with `wrangler 4.118.0`: `wrangler deploy --dry-run`
+> succeeds (config + bundle + bindings all valid, `exiting now`, no errors).
+> The real upload needs `wrangler login` + a created D1 database (see step 1).
 
 ## 0. Prerequisites
 
-- Node.js >= 20
-- Wrangler: `npm i -g wrangler` (or use `npx wrangler`)
-- A Cloudflare account you can authenticate to:
-  ```bash
+- Windows PowerShell 5.1+ (or PowerShell 7), Node.js >= 20.
+- Wrangler: `npm i -g wrangler` (or rely on `npx wrangler`, used by every script).
+- Authenticate once:
+  ```powershell
   npx wrangler login
-  npx wrangler whoami          # must print your account name
+  npx wrangler whoami          # prints your account/email
   ```
 
 ## 1. [ACCOUNT] Provision backing resources (one-time per account)
 
-Queues are auto-created on first deploy — no command needed. D1 and KV must be created first and their IDs pasted into `worker/wrangler.toml`.
+Only **D1 must be pre-created** (wrangler.toml declares it by `database_name` = `iprn_production`).
+KV namespaces and Queues are auto-provisioned by Wrangler from the `binding`-only declarations
+(no IDs to paste, no manual `kv:namespace create`).
 
-```bash
-# 1x — D1 database (replace the placeholder database_id in wrangler.toml)
-npx wrangler d1 create IPRN_PRODUCTION
-
-# 3x — KV namespaces (CACHE_KV, RATE_LIMIT_KV, SESSION_KV)
-# Each returns an `id` + `preview_id`; paste them into wrangler.toml under the matching binding.
-npx wrangler kv:namespace create CACHE_KV
-npx wrangler kv:namespace create RATE_LIMIT_KV
-npx wrangler kv:namespace create SESSION_KV
+```powershell
+npx wrangler d1 create iprn_production
 ```
 
-Resulting bindings (already declared in `worker/wrangler.toml`):
+Bindings declared in `worker/wrangler.toml` (auto-resolved):
+| Binding              | Resource        | Notes                                  |
+|-----------------------|-----------------|----------------------------------------|
+| `env.DB`              | D1 `iprn_production` | created above (step 1)              |
+| `env.CACHE_KV` / `RATE_LIMIT_KV` / `SESSION_KV` | KV | auto-created by Wrangler |
+| `env.REWARD_PROCESSING_QUEUE`, `WEBHOOK_DELIVERY_QUEUE`, `ANALYTICS_QUEUE`, `FRAUD_QUEUE` | Queue | auto-created; FRAUD_QUEUE is the webhook DLQ |
+| `env.ASSETS`          | Bundled static assets (`worker/public`) |                         |
+| `env.APP_NAME`, `env.APP_VERSION` | Environment variables |                       |
 
-| Binding                  | Resource        | Note                                  |
-|--------------------------|-----------------|---------------------------------------|
-| `env.DB`                 | D1 `IPRN_PRODUCTION` | created step 1 |
-| `env.CACHE_KV`           | KV              |                                       |
-| `env.RATE_LIMIT_KV`      | KV              |                                       |
-| `env.SESSION_KV`         | KV              |                                       |
-| `env.REWARD_PROCESSING_QUEUE` | Queue       | auto-created, has a consumer          |
-| `env.WEBHOOK_DELIVERY_QUEUE`  | Queue       | auto-created, consumer + DLQ=FRAUD    |
-| `env.ANALYTICS_QUEUE`         | Queue       | auto-created, has a consumer          |
-| `env.FRAUD_QUEUE`             | Queue       | auto-created, DLQ target only         |
-| `env.ASSETS`             | Bundled static assets | serves `/dashboard` and `/admin` |
-| `env.APP_NAME` / `env.APP_VERSION` | var | non-secret config                  |
+No R2 bucket is required (the unused `ASSETS_R2` binding was removed).
 
-(`ADMIN_TOKEN` is a secret, not a var — step 2.)
+## 2. [ACCOUNT] Set the ADMIN_TOKEN secret
 
-## 2. [ACCOUNT] Set Worker secrets
-
-```bash
-# Generate a strong value, then store it as a Worker secret (never in [vars]).
-ADMIN_TOKEN_VALUE="$(python3 -c 'import secrets;print(secrets.token_hex(24))')"
-echo "$ADMIN_TOKEN_VALUE" | npx wrangler secret put ADMIN_TOKEN
+```powershell
+# Generate a strong value
+$tok = (python3 -c "import secrets;print(secrets.token_hex(24))")
+$tok | npx wrangler secret put ADMIN_TOKEN
 ```
+Local dev: copy `worker/.dev.vars.example` to `worker/.dev.vars`, fill `ADMIN_TOKEN`, and run `npx wrangler dev` (the file is gitignored).
 
-Local dev only — create `worker/.dev.vars` (gitignored) from the template:
-```bash
-cp worker/.dev.vars.example worker/.dev.vars   # set ADMIN_TOKEN=dev-admin-token-change-me
-```
+## 3. [ACCOUNT] Apply D1 migrations (ordered 0001 -> 0030, REMOTE)
 
-## 3. [ACCOUNT] Apply D1 migrations (in order 0001 -> 0030)
-
-```bash
+```powershell
 npm run db:migrate
-#   = worker/scripts/migrate.sh  ->  npx wrangler d1 execute IPRN_PRODUCTION --file=migrations/0*.sql (sorted)
+#   worker/package.json: powershell -ExecutionPolicy Bypass -File scripts/migrate.ps1
+#   -> loops migrations/0*.sql (sorted) and runs:
+#      npx wrangler d1 execute iprn_production --remote --file <file>
 ```
-Optional seed (already included as `0030_seed.sql`; safe to run again — seed is `INSERT OR IGNORE`):
-```bash
-npm run db:seed
+Optional re-seed (idempotent; `0030_seed.sql` already runs in step 3):
+```powershell
+npm run db:seed     # npx wrangler d1 execute iprn_production --remote --file=migrations/0030_seed.sql
 ```
 
-## 4. Build + stage the dashboard and admin into the Worker assets
+## 4. Build + stage the dashboard and admin
 
-```bash
+```powershell
 npm run stage:assets
-#   = builds dashboard + admin, then copies dashboard/dist -> worker/public/dashboard
-#     and admin/dist -> worker/public/admin (served by [assets] directory = "./public")
+#   -> powershell -ExecutionPolicy Bypass -File worker/scripts/stage-assets.ps1
+#   -> builds dashboard + admin, then stages dist into worker/public/{dashboard,admin}
 ```
 
-## 5. Deploy the Worker
+## 5. Validate (no upload)
 
-```bash
-# One-shot orchestration (migrate -> stage -> validate -> deploy):
+```powershell
+Set-Location worker
+npx wrangler deploy --dry-run
+Set-Location ..
+# Must print "exiting now" with no errors and list the bindings above.
+```
+
+## 6. Deploy the Worker
+
+```powershell
 npm run deploy:production
-#   = bash scripts/deploy.sh
-
-# ...or step-by-step:
-npm run db:migrate
-npm run stage:assets
-( cd worker && npx wrangler deploy --dry-run )   # validates bundle + bindings, uploads nothing
-( cd worker && npx wrangler deploy )             # production upload (412.7 KiB incl. assets)
+#   -> scripts/deploy.ps1:  migrate -> stage -> dry-run -> npx wrangler deploy
+#
+# Or step-by-step:
+Set-Location worker
+npx wrangler deploy
+Set-Location ..
 ```
 
-## 6. Wire a custom domain (optional, for a vanity API origin)
+## 7. (Optional) Custom domain route
 
-```bash
+```powershell
 npx wrangler route add "api.example.com/*" iprn-worker
-# Dashboard is served same-origin at /dashboard, admin at /admin.
+```
+The apps are served same-origin (`/dashboard`, `/admin`) by the Worker; do not leave a placeholder zone in `wrangler.toml`.
+
+## 8. Verify the deployment
+
+```powershell
+curl https://<YOUR_DOMAIN>/api/v1/public/health          # 200 {"status":"ok", ...}
+curl https://<YOUR_DOMAIN>/dashboard/                     # served by Worker ASSETS
+curl https://<YOUR_DOMAIN>/admin/                         # served by Worker ASSETS
+curl https://<YOUR_DOMAIN>/api/v1/admin/stats `
+  -H "Authorization: Bearer <ACCESS_JWT>" -H "x-admin-token: <ADMIN_TOKEN>"
 ```
 
-## 7. Verify the deployment
+## 9. Rollback
 
-```bash
-curl -s https://<YOUR_DOMAIN>/api/v1/public/health
-# expect: 200 {"status":"ok",...}
-
-curl -s https://<YOUR_DOMAIN>/dashboard/ | head -5   # served by Worker ASSETS
-curl -s https://<YOUR_DOMAIN>/admin/    | head -5   # served by Worker ASSETS
-```
-Admin actions also require the access token of an admin user (seeded `admin-user-001`) or the `x-admin-token` secret:
-```bash
-curl -s https://<YOUR_DOMAIN>/api/v1/admin/stats \
-  -H "Authorization: Bearer <ACCESS_TOKEN>" -H "x-admin-token: <ADMIN_TOKEN_VALUE>"
+```powershell
+npx wrangler rollback
 ```
 
-## 8. Rollback
+## What was fixed for deployability
 
-```bash
-npx wrangler rollback                       # previous deployment
-npx wrangler d1 time-travel list ...        # D1 point-in-time restore (if enabled)
-```
+- `wrangler.toml`: converted queues to the **v4 object schema** (`queues.producers` / `queues.consumers`, `max_batch_timeout` instead of the rejected `max_batch_wait`); `database_name` lowered to `iprn_production`; removed placeholder `database_id` + KV `id`/`preview_id` (auto-provisioned); removed the unused `ASSETS_R2` (R2) and `EMAIL_QUEUE` bindings; removed `ADMIN_TOKEN` from `[vars]` (now a secret); removed dead `[env.local]`+`[[routes]]` placeholder zone; added `logpush = true`.
+- Worker `Env` (config.ts): dropped the unused `ASSETS_R2`/`EMAIL_QUEUE` fields.
+- `worker/package.json`: `build`→`npx wrangler deploy --dry-run` (was invalid `--dry-run deploy`); `db:migrate`→runs the ordered migration loop; `db:seed`→`iprn_production --remote`; added `stage:assets`.
+- Root `package.json`: `stage:assets` + `deploy:production` invoke the PowerShell scripts.
+- Asset serving: the Worker serves `/dashboard` and `/admin` from `worker/public`; this was previously broken (no staging step). `stage-assets.ps1` now builds and stages them before every deploy.
 
-## Known caveats (not blockers)
+## Verification performed in this sandbox (executed)
 
-- `cors` is configured as `origin: ["*"]` with `credentials: true` (worker `index.ts`). This is fine same-origin (the Worker serves the apps at `/dashboard` and `/admin`). For a **cross-origin** custom API domain, restrict `origin` to the real dashboard/admin origins.
-- Bundles exceed 500 KB (dashboard ~1.0 MB, admin ~798 KB minified) — add Vite `manualChunks` code-splitting if bundle-size matters.
-- `npm run test` (worker) currently fails (`vitest run` finds no test files) — baseline; not a deploy blocker. Add tests to enable it.
-- OpenAPI spec: not generated (no OpenAPI route/Swagger UI in the worker). The authoritative route table is in the admin UI at `/admin/#/api-docs` (mirrored in `admin/src/pages/ApiDocsPage.tsx`).
-- `compatibility_date = "2025-01-01"`; bump to a current date if you need newer runtime APIs / `nodejs_compat` defaults.
+- `npm run typecheck --workspaces` → EXIT 0 (api-client, reward-engine, types, validators, worker, dashboard, admin).
+- `npm run build:dashboard` / `npm run build:admin` → EXIT 0.
+- `wrangler deploy --dry-run` → succeeds; bindings list resolves (D1 `iprn_production`, KV×3, Queues×4, ASSETS, 2 vars); 412.69 KiB uploaded for validation.
+- `bash -n`/`Sort` of migration order: 30 files, lexical == execution order.
 
-Generated resources created/edited for deployability:
-- `worker/scripts/migrate.sh` — ordered D1 migration applier.
-- `worker/scripts/stage-assets.sh` — build + stage `dashboard`/`admin` dist into `worker/public`.
-- `scripts/deploy.sh` — `npm run deploy:production`.
-- `worker/.dev.vars.example` — local dev secret template.
-- `worker/wrangler.toml` — v4 `[[queues.producers]]`/`consumers` schema, `logpush`, secrets moved to `wrangler secret`, removed unused `ASSETS_R2`/`EMAIL_QUEUE` bindings and placeholder route/env.
-- `package.json` (root + worker) + `.gitignore` — deploy scripts, correct DB name, asset staging, secrets gitignored.
+## Verification NOT possible in this sandbox (requires a Cloudflare account + Windows)
+
+- `npx wrangler deploy` (real upload) — no authenticated session here (`wrangler whoami` → not authenticated).
+- PowerShell execution — no `pwsh`/`powershell` runtime here; the `.ps1` scripts are authored to Windows PowerShell 5.1 grammar and verified by review only. Run `powershell -ExecutionPolicy Bypass -File scripts/deploy.ps1` on Windows.
+- Runtime D1/Queue behavior, live SSE, webhooks, and end-to-end API calls — need a deployed Worker + Cloudflare account.
